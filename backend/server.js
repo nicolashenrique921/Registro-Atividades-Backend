@@ -67,6 +67,24 @@ app.delete("/atividades/:id", async (req, res) => {
   }
 });
 
+// Atualizar
+app.put("/atividades/:id", async (req, res) => {
+  try {
+    const atividadeAtualizada = await Atividade.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    if (!atividadeAtualizada) {
+      return res.status(404).json({ error: "Atividade não encontrada" });
+    }
+
+    res.json(atividadeAtualizada);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // -------------------------------
 // ▶️ INICIAR SERVIDOR
