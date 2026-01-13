@@ -30,6 +30,16 @@ const AtividadeSchema = new mongoose.Schema({
   data: { type: Date, default: Date.now }
 });
 
+// 🔁 transforma _id em id automaticamente
+AtividadeSchema.set("toJSON", {
+  virtuals: true,
+  versionKey: false,
+  transform: (_, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+  }
+});
+
 const Atividade = mongoose.model("Atividade", AtividadeSchema);
 
 // -------------------------------
@@ -40,7 +50,9 @@ app.get("/", (_, res) => {
   res.send("Servidor online 🚀");
 });
 
-// Criar
+// -------------------------------
+// ➕ CRIAR
+// -------------------------------
 app.post("/atividades", async (req, res) => {
   try {
     const atividade = await Atividade.create(req.body);
@@ -50,17 +62,40 @@ app.post("/atividades", async (req, res) => {
   }
 });
 
-// Listar
-app.get("/atividades", async (_, res) => {
+// -------------------------------
+// 📄 LISTAR (PAGINAÇÃO + BUSCA)
+// -------------------------------
+app.get("/atividades", async (req, res) => {
   try {
-    const atividades = await Atividade.find().sort({ data: -1 });
-    res.json(atividades);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const titulo = req.query.titulo || "";
+
+    const filtro = titulo
+      ? { titulo: { $regex: titulo, $options: "i" } }
+      : {};
+
+    const total = await Atividade.countDocuments(filtro);
+
+    const atividades = await Atividade.find(filtro)
+      .sort({ data: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.json({
+      data: atividades,
+      total,
+      page,
+      limit
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Buscar por ID
+// -------------------------------
+// 🔍 BUSCAR POR ID
+// -------------------------------
 app.get("/atividades/:id", async (req, res) => {
   try {
     const atividade = await Atividade.findById(req.params.id);
@@ -75,7 +110,9 @@ app.get("/atividades/:id", async (req, res) => {
   }
 });
 
-// Atualizar
+// -------------------------------
+// ✏️ ATUALIZAR
+// -------------------------------
 app.put("/atividades/:id", async (req, res) => {
   try {
     const atividade = await Atividade.findByIdAndUpdate(
@@ -94,7 +131,9 @@ app.put("/atividades/:id", async (req, res) => {
   }
 });
 
-// Remover
+// -------------------------------
+// 🗑️ REMOVER
+// -------------------------------
 app.delete("/atividades/:id", async (req, res) => {
   try {
     const atividade = await Atividade.findByIdAndDelete(req.params.id);
