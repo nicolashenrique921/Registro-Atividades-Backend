@@ -46,8 +46,41 @@ const Atividade = mongoose.model("Atividade", AtividadeSchema);
 // 📌 ROTAS
 // -------------------------------
 
-app.get("/", (_, res) => {
-  res.send("Servidor online 🚀");
+app.get("/atividades", async (req, res) => {
+  try {
+    const {
+      titulo = '',
+      ordenar = 'data',
+      direcao = 'desc',
+      page = 1,
+      size = 5
+    } = req.query;
+
+    const filtro = titulo
+      ? { titulo: { $regex: titulo, $options: 'i' } }
+      : {};
+
+    const skip = (Number(page) - 1) * Number(size);
+
+    const sort = {};
+    sort[ordenar] = direcao === 'asc' ? 1 : -1;
+
+    const [itens, total] = await Promise.all([
+      Atividade.find(filtro)
+        .sort(sort)
+        .skip(skip)
+        .limit(Number(size)),
+      Atividade.countDocuments(filtro)
+    ]);
+
+    res.json({
+      itens,
+      totalPaginas: Math.ceil(total / size)
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // -------------------------------
